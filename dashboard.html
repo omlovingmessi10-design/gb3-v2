@@ -396,7 +396,41 @@ button{font-family:inherit; cursor:pointer;}
 .mini-table{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:6px;}
 .mini-table th, .mini-table td{padding:7px 6px; border-bottom:1px solid var(--rule); text-align:left;}
 .mini-table th{color:var(--ink-soft); font-weight:600; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase;}
+/* ===== Test Analysis Module ===== */
+.ta-view { display: none; flex-direction: column; gap: 24px; animation: slideUp .25s ease;}
+.ta-view.show { display: flex; }
+.ta-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius-l); padding: 22px 20px; box-shadow: var(--shadow-card); }
+.ta-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.ta-header h2 { font-family: var(--font-display); font-size: 22px; font-weight: 600; }
+.back-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; background: var(--surface-2); border: 1px solid var(--rule); padding: 8px 14px; border-radius: 100px; color: var(--ink); }
+.back-btn:hover { background: var(--rule); }
+.ta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.ta-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 12px; padding: 12px; background: var(--surface-2); border-radius: var(--radius-m); border: 1px solid var(--rule); }
+.ta-row h4 { width: 70px; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+.ta-row input { width: 70px; }
+.ta-stats { font-family: var(--font-mono); font-size: 12.5px; margin-left: auto; display: flex; gap: 16px; font-weight: 500; }
+.text-red { color: var(--seal) !important; }
+.text-green { color: var(--sage) !important; }
+.ms-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.ms-chip { padding: 6px 12px; border-radius: 100px; border: 1px solid var(--rule); background: var(--surface-2); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s ease; color: var(--ink-soft); }
+.ms-chip.active { background: var(--navy-bright); color: #fff; border-color: var(--navy-bright); }
+.ms-chip.static { cursor: default; background: transparent; padding: 4px 8px; font-size: 11px; font-family: var(--font-mono); }
+.ta-accordion { margin-top: 16px; border: 1px solid var(--rule); border-radius: var(--radius-m); overflow: hidden; }
+.ta-accordion-head { padding: 14px; background: var(--surface-2); font-size: 13.5px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; }
+.ta-accordion-body { display: none; padding: 14px; border-top: 1px solid var(--rule); background: var(--surface); }
+.ta-accordion-body.open { display: block; }
+.history-item { padding: 16px 0; border-bottom: 1px dashed var(--rule-strong); }
+.history-item:last-child { border-bottom: none; padding-bottom: 0; }
+.history-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.history-top h4 { font-size: 15.5px; font-weight: 600; }
+.history-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
+.history-stats { display: flex; gap: 16px; font-size: 13.5px; margin-bottom: 10px; font-weight: 500; }
+.chart-wrap { position: relative; height: 320px; width: 100%; margin-top: 24px; padding-top: 14px; border-top: 1px dashed var(--rule-strong); }
 </style>
+
+<!-- Add this right before </head> -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 <body>
 
@@ -481,6 +515,103 @@ button{font-family:inherit; cursor:pointer;}
 
         <div class="task-list" id="taskList"></div>
       </section>
+
+      <!-- ===== EMT-2 : Prelims Test Analysis ===== -->
+<div class="ta-view" id="testAnalysisView">
+  
+  <div class="ta-header">
+    <div>
+      <span class="eyebrow">EMT · 10</span>
+      <h2>Test Analysis Ledger</h2>
+    </div>
+    <button class="back-btn" onclick="closeTestAnalysis()">${svg('arrow', 'style="transform:rotate(180deg);width:14px;"')} Back to Daybook</button>
+  </div>
+
+  <!-- Panel 1: Data Entry -->
+  <div class="ta-card">
+    <h3 style="margin-bottom: 16px; font-size: 16px;">Log a New Attempt</h3>
+    
+    <div class="field">
+      <label>Test Name</label>
+      <input type="text" id="taName" placeholder="e.g. Abhyaas FLT 3">
+    </div>
+    
+    <div class="ta-grid">
+      <div class="field">
+        <label>Format</label>
+        <select id="taType" onchange="taUpdateFormat()">
+          <option value="FLT">FLT — Full Length (100 Q / 200 M)</option>
+          <option value="HLT">HLT — Half Length (50 Q / 100 M)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="taDate">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Subjects Evaluated</label>
+      <div class="ms-container" id="taSubjectChips"></div>
+    </div>
+
+    <div class="field" style="margin-top: 24px;">
+      <label>Iteration Data</label>
+      <div class="ta-row">
+        <h4>Round 1</h4>
+        <input type="number" id="r1c" placeholder="Correct" oninput="taCalcRow('r1')">
+        <input type="number" id="r1i" placeholder="Incorrect" oninput="taCalcRow('r1')">
+        <div class="ta-stats">
+          <span>Marks: <b id="r1m">0.00</b></span>
+          <span>Acc: <b id="r1a">0.0%</b></span>
+        </div>
+      </div>
+      <div class="ta-row">
+        <h4>Round 2</h4>
+        <input type="number" id="r2c" placeholder="Correct" oninput="taCalcRow('r2')">
+        <input type="number" id="r2i" placeholder="Incorrect" oninput="taCalcRow('r2')">
+        <div class="ta-stats">
+          <span>Marks: <b id="r2m">0.00</b></span>
+          <span>Acc: <b id="r2a">0.0%</b></span>
+        </div>
+      </div>
+      <div class="ta-row">
+        <h4>Round 3</h4>
+        <input type="number" id="r3c" placeholder="Correct" oninput="taCalcRow('r3')">
+        <input type="number" id="r3i" placeholder="Incorrect" oninput="taCalcRow('r3')">
+        <div class="ta-stats">
+          <span>Marks: <b id="r3m">0.00</b></span>
+          <span>Acc: <b id="r3a">0.0%</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subject Wise Accordion -->
+    <div class="ta-accordion">
+      <div class="ta-accordion-head" onclick="document.getElementById('taSubBody').classList.toggle('open')">
+        <span>+ Add Subject-Wise Granularity (Optional)</span>
+        <span id="taFormatLabel">Max 200 Marks</span>
+      </div>
+      <div class="ta-accordion-body" id="taSubBody"></div>
+    </div>
+
+    <button class="modal-submit" onclick="taSaveTest()" style="margin-top: 18px;">Commit to Ledger</button>
+  </div>
+
+  <!-- Panel 2: History -->
+  <div class="ta-card">
+    <h3 style="margin-bottom: 10px; font-size: 16px;">Test Ledger</h3>
+    <div id="taHistoryList"></div>
+  </div>
+
+  <!-- Panel 3: Trajectories -->
+  <div class="ta-card">
+    <h3 style="margin-bottom: 10px; font-size: 16px;">Performance Trajectories</h3>
+    <div class="chart-wrap"><canvas id="scoreChart"></canvas></div>
+    <div class="chart-wrap"><canvas id="subjectChart"></canvas></div>
+  </div>
+
+</div>
 
       <!-- ===== module grid ===== -->
       <div class="section-head">
