@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GB3 — The Daybook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,680&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e7e4d6;
+  --surface:#fbf9f1;
+  --surface-2:#f2efe2;
+  --ink:#1b2a44;
+  --ink-soft:#5a6478;
+  --ink-faint:#8a8f7f;
+  --rule:#cac3a9;
+  --rule-strong:#b3ab8d;
+  --seal:#9c2b2b;
+  --seal-soft:#e9d3ce;
+  --brass:#a9781f;
+  --brass-soft:#ecdfc0;
+  --sage:#4b6b4c;
+  --sage-soft:#d9e3d3;
+  --navy-bright:#2e4a82;
+  --panel:#1b2a44;
+  --radius-s:6px;
+  --radius-m:12px;
+  --radius-l:20px;
+  --shadow-card:0 1px 2px rgba(27,42,68,.06), 0 8px 24px -12px rgba(27,42,68,.18);
+  --font-display:'Fraunces', serif;
+  --font-body:'IBM Plex Sans', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+}
+html.dark{
+  --bg:#10162a;
+  --surface:#1a2338;
+  --surface-2:#212b44;
+  --ink:#edeff5;
+  --ink-soft:#a6adc4;
+  --ink-faint:#767d99;
+  --rule:#323e5c;
+  --rule-strong:#454f74;
+  --seal:#e2837b;
+  --seal-soft:#3a2530;
+  --brass:#d9b768;
+  --brass-soft:#3a331f;
+  --sage:#93c398;
+  --sage-soft:#213326;
+  --navy-bright:#8fadf0;
+}
+html.dark body::before{opacity:.18;}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(27,42,68,.05) 1px, transparent 0);
+  background-size:22px 22px;
+  pointer-events:none;
+  z-index:0;
+  opacity:.5;
+}
+a{color:inherit;}
+button{font-family:inherit; cursor:pointer;}
+:focus-visible{outline:2px solid var(--navy-bright); outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.01ms !important; transition-duration:.01ms !important;}
+}
+
+/* ===== layout shell ===== */
+.shell{
+  position:relative; z-index:1;
+  min-height:100vh;
+}
+
+/* sidebar drawer — toggled by the three-bar control, overlay on phones, pushes content on wide screens */
+.rail{
+  position:fixed; top:0; left:0; height:100vh; width:250px;
+  display:flex; flex-direction:column; justify-content:space-between;
+  background:var(--panel); color:#eee7d3;
+  padding:20px 16px 18px;
+  z-index:70;
+  transform:translateX(-100%);
+  transition:transform .25s ease;
+}
+.rail.open{transform:translateX(0);}
+.rail-top{display:flex; flex-direction:column; align-items:stretch; gap:26px;}
+.rail-head{display:flex; align-items:center; justify-content:space-between;}
+.rail-mark{
+  font-family:var(--font-display); font-weight:680; font-size:19px; letter-spacing:.3px; line-height:1.1;
+}
+.rail-mark span.tag{font-family:var(--font-mono); font-size:9.5px; color:#c8cbd8; letter-spacing:.08em; display:block; margin-top:2px; font-weight:400;}
+.rail-close{
+  width:34px; height:34px; border-radius:8px; border:1px solid #ffffff2a; background:#ffffff10;
+  display:flex; align-items:center; justify-content:center; color:#eee7d3; flex-shrink:0;
+}
+.rail-close svg{width:17px; height:17px;}
+.rail-close:hover{background:#ffffff1c;}
+.rail-tabs{display:flex; flex-direction:column; gap:3px; width:100%;}
+.rail-tab{
+  display:flex; flex-direction:row; align-items:center; gap:12px;
+  padding:11px 12px; width:100%; text-align:left;
+  background:transparent; border:none; border-radius:var(--radius-s); color:#c8cbd8;
+  font-size:13.5px; font-weight:500;
+  position:relative;
+  transition:background .15s ease, color .15s ease;
+}
+.rail-tab svg{width:18px; height:18px; flex-shrink:0;}
+.rail-tab:hover{background:#ffffff10; color:#eee7d3;}
+.rail-tab.active{color:#fff; background:#ffffff14;}
+.rail-tab.active::before{content:""; position:absolute; left:-16px; top:6px; bottom:6px; width:3px; background:var(--seal); border-radius:2px;}
+.rail-divider{height:1px; background:#ffffff1c; margin:8px 4px;}
+.rail-bottom{display:flex; align-items:center; gap:10px; width:100%; background:none; border:none; padding:10px 8px; border-radius:var(--radius-s); text-align:left;}
+.rail-bottom:hover{background:#ffffff10;}
+.rail-avatar{width:34px; height:34px; border-radius:50%; object-fit:cover; border:1.5px solid #eee7d366; flex-shrink:0;}
+.rail-bottom-text{display:flex; flex-direction:column; line-height:1.25;}
+.rail-bottom-text b{font-size:12.5px; color:#eee7d3; font-weight:600;}
+.rail-bottom-text span{font-size:10.5px; color:#a8ade0;}
+
+/* backdrop only needed while the drawer floats over narrow layouts */
+.backdrop{
+  position:fixed; inset:0; background:#14213d9c; z-index:65;
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.backdrop.show{opacity:1; pointer-events:auto;}
+@media (min-width:880px){ .backdrop{display:none;} }
+
+.main{
+  min-width:0;
+  padding:20px 16px 60px;
+  transition:margin-left .25s ease;
+}
+@media (min-width:600px){ .main{padding:28px 32px 60px;} }
+@media (min-width:880px){ .main{padding:32px 40px 60px;} }
+@media (min-width:1220px){ .main{padding:40px 56px 70px;} }
+@media (min-width:880px){ .main.pushed{margin-left:250px;} }
+.main-inner{max-width:1180px; margin:0 auto;}
+
+/* ===== header ===== */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; margin-bottom:22px;
+}
+.topbar-left{display:flex; align-items:center; gap:12px; min-width:0;}
+.profile{display:flex; align-items:center; gap:12px; background:none; border:none; text-align:left; min-width:0; border-radius:var(--radius-s); padding:4px; margin:-4px;}
+.profile:hover{background:var(--surface-2);}
+.profile img{width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid var(--surface); box-shadow:0 0 0 2px var(--rule-strong);}
+.profile-name{font-weight:600; font-size:15px; line-height:1.2;}
+.profile-sub{font-size:12px; color:var(--ink-soft); font-family:var(--font-mono);}
+.top-actions{display:flex; align-items:center; gap:8px;}
+.icon-btn{
+  width:40px; height:40px; border-radius:50%; border:1px solid var(--rule);
+  background:var(--surface); display:flex; align-items:center; justify-content:center;
+  position:relative; color:var(--ink);
+}
+.icon-btn svg{width:17px; height:17px;}
+.icon-btn .dot{position:absolute; top:9px; right:10px; width:6px; height:6px; border-radius:50%; background:var(--seal);}
+
+/* ===== daybook hero ===== */
+.daybook{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-radius:var(--radius-l);
+  box-shadow:var(--shadow-card);
+  padding:22px 20px 20px;
+  position:relative;
+  overflow:hidden;
+  margin-bottom:26px;
+}
+.daybook::before{
+  content:""; position:absolute; inset:0;
+  background-image:repeating-linear-gradient(to bottom, transparent 0 37px, var(--rule) 37px 38px);
+  opacity:.35; pointer-events:none;
+}
+.daybook-head{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
+  position:relative; z-index:1; flex-wrap:wrap; margin-bottom:18px;
+}
+.eyebrow{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:6px; display:block;
+}
+.daybook h1{
+  font-family:var(--font-display); font-weight:600; font-size:clamp(24px,4vw,32px);
+  letter-spacing:-.01em;
+}
+.close-ribbon{
+  display:flex; align-items:center; gap:8px;
+  background:var(--seal-soft); color:var(--seal);
+  border:1px solid #9c2b2b33; border-radius:100px;
+  padding:8px 14px; font-size:12.5px; font-weight:600;
+  white-space:nowrap;
+}
+.close-ribbon svg{width:14px; height:14px; flex-shrink:0;}
+.close-ribbon b{font-family:var(--font-mono); font-weight:500;}
+
+.tab-strip{
+  display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; margin-bottom:16px;
+  position:relative; z-index:1;
+  scrollbar-width:none;
+}
+.tab-strip::-webkit-scrollbar{display:none;}
+.tab-chip{
+  flex-shrink:0; padding:8px 14px; border-radius:100px; border:1px solid var(--rule);
+  background:var(--surface-2); font-size:13px; font-weight:500; color:var(--ink-soft);
+  display:flex; align-items:center; gap:6px;
+}
+.tab-chip .n{font-family:var(--font-mono); font-size:11px; opacity:.7;}
+.tab-chip.active{background:var(--panel); color:#eee7d3; border-color:var(--panel);}
+
+.daybook-toolbar{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin-bottom:14px; position:relative; z-index:1;
+}
+.count-label{font-size:13px; color:var(--ink-soft);}
+.count-label b{color:var(--ink);}
+.add-btn{
+  display:flex; align-items:center; gap:6px;
+  background:var(--panel); color:#eee7d3; border:none; border-radius:var(--radius-s);
+  padding:9px 14px; font-size:13px; font-weight:600;
+}
+.add-btn svg{width:15px; height:15px;}
+.add-btn:hover{background:var(--navy-bright);}
+
+.task-list{position:relative; z-index:1; display:flex; flex-direction:column; gap:2px;}
+.task{
+  display:flex; align-items:center; gap:12px;
+  padding:12px 6px; border-bottom:1px dashed var(--rule-strong);
+}
+.task:last-child{border-bottom:none;}
+.check{
+  width:22px; height:22px; border-radius:50%; border:1.6px solid var(--ink-soft);
+  flex-shrink:0; background:none; position:relative;
+}
+.check svg{position:absolute; inset:0; margin:auto; width:12px; height:12px; opacity:0; color:var(--sage);}
+.task.done .check{border-color:var(--sage); background:var(--sage-soft);}
+.task.done .check svg{opacity:1;}
+.task-body{flex:1; min-width:0;}
+.task-title{font-size:14.5px; font-weight:500; line-height:1.35;}
+.task.done .task-title{text-decoration:line-through; color:var(--ink-faint);}
+.task-meta{display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap;}
+.stamp{
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase;
+  font-weight:600; padding:2.5px 8px 2.5px 9px; border-radius:100px; border:1.4px dashed;
+  transform:rotate(-2deg); display:inline-block;
+}
+.stamp.high{color:var(--seal); border-color:var(--seal);}
+.stamp.medium{color:var(--brass); border-color:var(--brass);}
+.stamp.low{color:var(--sage); border-color:var(--sage);}
+.cat-tag{font-size:10.5px; color:var(--ink-faint); font-family:var(--font-mono);}
+.task-actions{display:flex; align-items:center; gap:4px; flex-shrink:0;}
+.menu-wrap{position:relative;}
+.dots{
+  width:30px; height:30px; border-radius:50%; border:none; background:transparent;
+  display:flex; align-items:center; justify-content:center; color:var(--ink-soft);
+}
+.dots:hover{background:var(--surface-2);}
+.dots svg{width:16px; height:16px;}
+.menu{
+  position:absolute; right:0; top:34px; min-width:170px; background:var(--surface);
+  border:1px solid var(--rule); border-radius:var(--radius-s); box-shadow:var(--shadow-card);
+  z-index:20; overflow:hidden; display:none;
+}
+.menu.open{display:block;}
+.menu button{
+  display:block; width:100%; text-align:left; padding:10px 14px; font-size:13px;
+  background:none; border:none; color:var(--ink);
+}
+.menu button:hover{background:var(--surface-2);}
+.menu button.danger{color:var(--seal);}
+.empty-state{
+  padding:26px 10px; text-align:center; color:var(--ink-soft); font-size:13.5px; position:relative; z-index:1;
+}
+
+/* CA add-task extra field */
+.ca-panel{
+  background:var(--brass-soft); border:1px dashed var(--brass); border-radius:var(--radius-m);
+  padding:12px 14px; margin-bottom:14px; font-size:12.5px; color:#5c440f; position:relative; z-index:1;
+  display:none;
+}
+.ca-panel.show{display:block;}
+
+/* CSAT panel */
+.csat-panel{position:relative; z-index:1; display:none; flex-direction:column; gap:10px; margin-bottom:16px;}
+.csat-panel.show{display:flex;}
+.csat-card{
+  border:1px solid var(--rule); border-radius:var(--radius-m); padding:12px 14px;
+  background:var(--surface-2); display:flex; flex-direction:column; gap:8px;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.csat-card:hover{transform:translateY(-2px); box-shadow:var(--shadow-card);}
+.csat-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+.csat-top strong{font-size:13.5px;}
+.csat-top span{font-family:var(--font-mono); font-size:11px; color:var(--ink-soft);}
+.bar{height:6px; border-radius:100px; background:var(--rule); overflow:hidden;}
+.bar i{display:block; height:100%; background:var(--navy-bright); border-radius:100px;}
+.csat-hint{font-size:11.5px; color:var(--ink-soft); max-height:0; overflow:hidden; transition:max-height .2s ease;}
+.csat-card:hover .csat-hint{max-height:40px;}
+
+/* ===== modules grid ===== */
+.section-head{display:flex; align-items:baseline; justify-content:space-between; margin:8px 0 14px; gap:10px;}
+.section-head h2{font-family:var(--font-display); font-weight:600; font-size:20px;}
+.section-head span{font-size:12.5px; color:var(--ink-soft);}
+.modules{
+  display:grid; grid-template-columns:1fr; gap:14px; margin-bottom:30px;
+}
+@media (min-width:640px){ .modules{grid-template-columns:1fr 1fr;} }
+@media (min-width:1220px){ .modules{grid-template-columns:1fr 1fr 1fr;} }
+.module-card{
+  background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius-m);
+  padding:16px 16px 15px; display:flex; flex-direction:column; gap:10px; text-align:left;
+  box-shadow:var(--shadow-card); transition:transform .15s ease, border-color .15s ease;
+}
+.module-card:hover{transform:translateY(-3px); border-color:var(--ink-soft);}
+.module-top{display:flex; align-items:center; justify-content:space-between;}
+.module-icon{
+  width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--surface-2); border:1px solid var(--rule); color:var(--ink);
+}
+.module-icon svg{width:17px; height:17px;}
+.module-id{font-family:var(--font-mono); font-size:10px; color:var(--ink-faint);}
+.module-card h3{font-size:15.5px; font-weight:600; line-height:1.3;}
+.module-card p{font-size:12.5px; color:var(--ink-soft); line-height:1.45;}
+.module-open{
+  align-self:flex-start; font-size:12px; font-weight:600; color:var(--navy-bright);
+  display:flex; align-items:center; gap:4px; margin-top:2px;
+}
+.module-open svg{width:12px; height:12px;}
+
+/* ===== Obsidian-style note graph (CA Map) ===== */
+.graph-wrap{background:var(--surface-2); border:1px solid var(--rule); border-radius:var(--radius-m); padding:6px; margin-top:4px;}
+.graph-svg{width:100%; height:270px; display:block;}
+.g-edge{stroke:var(--rule-strong); stroke-width:.3; transition:stroke .15s ease, stroke-width .15s ease;}
+.g-edge.active{stroke:var(--navy-bright); stroke-width:.7;}
+.g-node{cursor:pointer;}
+.g-dot{stroke-width:1.1; transition:r .15s ease;}
+.g-dot.brass{stroke:var(--brass); fill:var(--brass-soft);}
+.g-dot.navy{stroke:var(--navy-bright); fill:var(--surface);}
+.g-dot.sage{stroke:var(--sage); fill:var(--sage-soft);}
+.g-dot.seal{stroke:var(--seal); fill:var(--seal-soft);}
+.g-node:hover .g-dot{r:3.4;}
+.g-node.dim{opacity:.22;}
+.g-label{font-size:2.5px; fill:var(--ink-soft); font-family:var(--font-mono); text-anchor:middle;}
+.g-node:hover .g-label{fill:var(--ink); font-weight:600;}
+.graph-caption{font-size:11.5px; color:var(--ink-soft); padding:8px 4px 2px; text-align:center;}
+
+/* ===== modal ===== */
+.overlay{
+  position:fixed; inset:0; background:#14213dcc; z-index:60;
+  display:none; align-items:flex-end; justify-content:center; padding:0;
+}
+.overlay.open{display:flex;}
+@media (min-width:640px){ .overlay{align-items:center; padding:20px;} }
+.modal{
+  background:var(--surface); width:100%; max-width:460px; max-height:88vh; overflow-y:auto;
+  border-radius:20px 20px 0 0; padding:22px 20px 26px; position:relative;
+  animation:slideUp .22s ease;
+}
+@media (min-width:640px){ .modal{border-radius:var(--radius-l);} }
+@keyframes slideUp{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+.modal h3{font-family:var(--font-display); font-size:19px; font-weight:600; margin-bottom:4px;}
+.modal .sub{font-size:12.5px; color:var(--ink-soft); margin-bottom:18px;}
+.modal-close{position:absolute; top:16px; right:16px; width:30px; height:30px; border-radius:50%; border:1px solid var(--rule); background:var(--surface-2); display:flex; align-items:center; justify-content:center;}
+.modal-close svg{width:14px; height:14px;}
+.field{margin-bottom:14px;}
+.field label{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;}
+.field input, .field select, .field textarea{
+  width:100%; padding:10px 12px; border:1px solid var(--rule); border-radius:var(--radius-s);
+  background:var(--surface-2); font-family:inherit; font-size:14px; color:var(--ink);
+}
+.field input:focus, .field select:focus{outline:2px solid var(--navy-bright); outline-offset:1px;}
+.priority-picker{display:flex; gap:8px;}
+.pchip{flex:1; padding:9px 0; text-align:center; border-radius:var(--radius-s); border:1.5px solid var(--rule); font-size:12.5px; font-weight:600; background:var(--surface-2); color:var(--ink-soft);}
+.pchip.sel{border-color:var(--navy-bright); color:var(--navy-bright); background:var(--surface-2);}
+.pchip.sel-high.sel{border-color:var(--seal); color:var(--seal); background:var(--seal-soft);}
+.pchip.sel-medium.sel{border-color:var(--brass); color:var(--brass); background:var(--brass-soft);}
+.pchip.sel-low.sel{border-color:var(--sage); color:var(--sage); background:var(--sage-soft);}
+.check-row{display:flex; align-items:center; gap:9px; font-size:13px; font-weight:400; text-transform:none; letter-spacing:0; margin-bottom:9px; color:var(--ink);}
+.check-row input{width:16px; height:16px; accent-color:var(--navy-bright); flex-shrink:0;}
+.modal-submit{
+  width:100%; padding:12px; border:none; border-radius:var(--radius-s); background:var(--panel); color:#eee7d3;
+  font-weight:600; font-size:14px; margin-top:4px;
+}
+.modal-submit:hover{background:var(--navy-bright);}
+.info-block{background:var(--surface-2); border:1px solid var(--rule); border-radius:var(--radius-m); padding:14px; font-size:13px; line-height:1.55; color:var(--ink-soft); margin-bottom:12px;}
+.info-block b{color:var(--ink);}
+.mini-table{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:6px;}
+.mini-table th, .mini-table td{padding:7px 6px; border-bottom:1px solid var(--rule); text-align:left;}
+.mini-table th{color:var(--ink-soft); font-weight:600; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- ===== side rail — toggleable drawer, all breakpoints ===== -->
+  <nav class="rail" id="rail" aria-label="Primary">
+    <div class="rail-top">
+      <div class="rail-head">
+        <div class="rail-mark">GB3<span class="tag">DAYBOOK OS</span></div>
+        <button class="rail-close" id="railCloseBtn" aria-label="Close sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+      <div class="rail-tabs" id="railTabs"></div>
+      <div class="rail-divider"></div>
+      <button class="rail-tab" id="railSettingsBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Profile &amp; settings</span>
+      </button>
+    </div>
+    <button class="rail-bottom" id="railProfileBtn">
+      <img class="rail-avatar" src="https://i.pravatar.cc/80?img=13" alt="">
+      <div class="rail-bottom-text"><b>Aarav Mehta</b><span>CSE 2027 · Attempt 2</span></div>
+    </button>
+  </nav>
+  <div class="backdrop" id="backdrop"></div>
+
+  <main class="main" id="appMain">
+    <div class="main-inner">
+
+      <!-- ===== topbar ===== -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn" id="hamburgerBtn" aria-label="Toggle sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <button class="profile" id="profileTrigger">
+            <img src="https://i.pravatar.cc/80?img=13" alt="">
+            <div>
+              <div class="profile-name">Aarav Mehta</div>
+              <div class="profile-sub">CSE 2027 · Attempt 2</div>
+            </div>
+          </button>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" id="darkToggle" aria-label="Toggle dark mode"></button>
+          <button class="icon-btn" aria-label="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="dot"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== EMT-1 : Daybook ===== -->
+      <section class="daybook" id="daybook">
+        <div class="daybook-head">
+          <div>
+            <span class="eyebrow">EMT · 01 — Today's register</span>
+            <h1 id="todayTitle">The Daybook</h1>
+          </div>
+          <div class="close-ribbon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Closes in <b id="countdown">—</b>
+          </div>
+        </div>
+
+        <div class="tab-strip" id="tabStrip"></div>
+
+        <div class="ca-panel" id="caPanel">
+          Adding a task here opens a topic field plus a syllabus-theme dropdown, so every CA entry gets filed against one of 20+ themes — the brainstorm is part of the task.
+        </div>
+
+        <div class="csat-panel" id="csatPanel"></div>
+
+        <div class="daybook-toolbar">
+          <span class="count-label"><b id="doneCount">0</b> of <b id="totalCount">0</b> filed today</span>
+          <button class="add-btn" id="openAdd">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+            Add task
+          </button>
+        </div>
+
+        <div class="task-list" id="taskList"></div>
+      </section>
+
+      <!-- ===== module grid ===== -->
+      <div class="section-head">
+        <h2>Every module</h2>
+        <span>Eleven ledgers, one preparation</span>
+      </div>
+      <div class="modules" id="moduleGrid"></div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ===== profile & settings modal ===== -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal" id="settingsModal">
+    <button class="modal-close" id="closeSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h3>Profile &amp; settings</h3>
+    <p class="sub">Kept for this session only.</p>
+    <div class="field"><label>Name</label><input type="text" id="setName" value="Aarav Mehta"></div>
+    <div class="field"><label>Email</label><input type="text" id="setEmail" value="aarav.mehta@example.com"></div>
+    <div class="field"><label>Target exam</label><select id="setYear"><option>CSE 2027 · Attempt 2</option><option>CSE 2028 · Attempt 1</option></select></div>
+    <div class="field"><label>Optional subject</label><select><option>History</option><option>Geography</option><option>Public Administration</option><option>Political Science</option><option>Sociology</option></select></div>
+    <div class="field">
+      <label>Appearance</label>
+      <div class="priority-picker">
+        <button class="pchip" id="setLightBtn">Light</button>
+        <button class="pchip" id="setDarkBtn">Dark</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Notifications</label>
+      <label class="check-row"><input type="checkbox" checked> Daybook closing reminder (4AM)</label>
+      <label class="check-row"><input type="checkbox" checked> Weekly CSAT auto-assignment</label>
+      <label class="check-row"><input type="checkbox"> Essay Arc re-survey due</label>
+    </div>
+    <button class="modal-submit" id="saveSettings">Save changes</button>
+  </div>
+</div>
+
+<!-- ===== add task modal ===== -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="addModal">
+    <button class="modal-close" id="closeAdd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h3>New entry</h3>
+    <p class="sub">Filed under <b id="modalCat">GS</b> · today's register only, wiped after the daybook closes.</p>
+    <div class="field" id="topicField">
+      <label>Topic</label>
+      <input type="text" id="taskTitle" placeholder="e.g. Read Laxmikanth Ch. 9 — Emergency provisions">
+    </div>
+    <div class="field" id="themeField" style="display:none;">
+      <label>Syllabus theme</label>
+      <select id="themeSelect"></select>
+    </div>
+    <div class="field">
+      <label>Priority</label>
+      <div class="priority-picker" id="priorityPicker">
+        <button class="pchip sel-high" data-p="high">High</button>
+        <button class="pchip sel-medium sel" data-p="medium">Medium</button>
+        <button class="pchip sel-low" data-p="low">Low</button>
+      </div>
+    </div>
+    <button class="modal-submit" id="submitTask">File to today's daybook</button>
+  </div>
+</div>
+
+<!-- ===== module info modal ===== -->
+<div class="overlay" id="moduleOverlay">
+  <div class="modal" id="moduleModal">
+    <button class="modal-close" id="closeModule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div id="moduleModalBody"></div>
+  </div>
+</div>
+
+<script>
+/* ================= data ================= */
+const CATEGORIES = [
+  {id:'GS', label:'GS', icon:'book'},
+  {id:'Optional', label:'Optional', icon:'target'},
+  {id:'CA', label:'CA', icon:'paper'},
+  {id:'CSAT', label:'CSAT', icon:'gauge'},
+  {id:'Revision', label:'Revision', icon:'refresh'},
+];
+
+const ICONS = {
+  book:'<path d="M4 4.5A2.5 2.5 0 016.5 2H20v17H6.5A2.5 2.5 0 004 16.5v-12z"/><path d="M4 16.5A2.5 2.5 0 006.5 19H20"/>',
+  target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6" fill="currentColor"/>',
+  paper:'<path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/><path d="M9 12h6M9 16h6"/>',
+  gauge:'<path d="M4 15a8 8 0 1116 0"/><path d="M12 15l4-5"/><path d="M12 15h.01"/>',
+  refresh:'<path d="M3 12a9 9 0 0115.5-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-15.5 6.4L3 16"/><path d="M3 21v-5h5"/>',
+  home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  essay:'<path d="M4 19V5a2 2 0 012-2h9l5 5v11a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M9 9h6M9 13h6M9 17h3"/>',
+  quiz:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 115 .7c-.5 1-2 1.1-2.3 2.3"/><path d="M12 17h.01"/>',
+  mentor:'<circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/>',
+  mains:'<path d="M4 19V5a2 2 0 012-2h9l5 5v11a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M9 9h6M9 13h6M9 17h6"/>',
+  map:'<path d="M9 3L3 6v15l6-3 6 3 6-3V3l-6 3-6-3z"/><path d="M9 3v15M15 6v15"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  plan:'<path d="M4 4h16v4H4z"/><path d="M4 12h16v8H4z"/><path d="M8 16h8"/>',
+  stats:'<path d="M4 20V10M11 20V4M18 20v-7"/>',
+  heart:'<path d="M12 20s-7-4.4-9.5-9C.7 7.4 3 4 6.5 4c2 0 3.4 1.1 4 2.2C11.1 5.1 12.5 4 14.5 4 18 4 20.3 7.4 18.5 11 16 15.6 12 20 12 20z"/>',
+  check2:'<path d="M20 6L9 17l-5-5"/>',
+  dots:'<circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  moon:'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>',
+  sun:'<circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M2 12h2.2M19.8 12H22M4.9 19.1l1.5-1.5M17.6 6.4l1.5-1.5"/>',
+};
+function svg(name, extra=''){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ${extra}>${ICONS[name]}</svg>`; }
+
+const THEMES = ["Polity & Constitution","Indian Economy","Physical Geography","Indian & World History","Environment & Ecology","Science & Technology","International Relations","Ethics & Governance","Indian Society","Disaster Management","Internal Security","Agriculture","Art & Culture","Social Justice","Bilateral Relations","Government Schemes","Biodiversity","Space & Defence Tech","World Geography","Health & Education Policy","Reports & Indices"];
+
+let tasks = [
+  {id:1, title:"Laxmikanth Ch.9 — Emergency provisions", cat:"GS", priority:"high", done:false},
+  {id:2, title:"PYQ set — Mughal administration", cat:"Optional", priority:"medium", done:true},
+  {id:3, title:"Read: Farm loan waivers", cat:"CA", priority:"medium", done:false, theme:"Indian Economy"},
+  {id:4, title:"CSAT Percentage — Level 1 set", cat:"CSAT", priority:"low", done:false},
+  {id:5, title:"Revise: Fundamental Rights case laws", cat:"Revision", priority:"high", done:false},
+];
+let nextId = 6;
+let activeCat = "GS";
+
+const MODULES = [
+  {icon:'essay', tag:'EMT · Essay Arc', title:'Essay Arc', desc:"A short preparation survey allocates you a ladder of topper copies, from your level up to the apex scripts — reassessed on your own schedule.", body:`
+    <div class="info-block"><b>How the arc works.</b> A quick preparation survey maps strengths and weaknesses — content depth, the opening 15 minutes, structure — then recommends topper copies matched to where you stand, plus anecdotes, examples and quotes worth learning, and drills on precise narration.</div>
+    <div class="info-block"><b>Your current allocation.</b> Re-survey in <b>6 days</b>. Reading list: <i>Copy 14 — Kaveri, AIR 22</i>, <i>Copy 31 — Rehan, AIR 61</i>.</div>
+    <div class="field"><label>Re-survey cadence</label><select><option>Every 7 days</option><option>Every 14 days</option><option>Every 21 days</option></select></div>`},
+  {icon:'quiz', tag:'EMT · CSAT Engine', title:'CSAT Engine', desc:"Practice feeds the Daybook directly — clear an L1 set here and L2 lands in tomorrow's tasks automatically.", body:`<div class="info-block">Attempt topic-wise CSAT sets. Completing a level here marks the linked Daybook task done and queues the next difficulty for tomorrow — no manual planning required.</div>`},
+  {icon:'book', tag:'EMT · Prelims PYQs', title:'Prelims PYQs', desc:"Topic or theme-wise quizzes from past papers, each with a full worked solution — including why the wrong options are wrong.", body:`<div class="info-block">Filter by topic, theme, or year. Every question set (PYQ+) also drills the discarded options — so you learn A, B and D, not just the correct C.</div>`},
+  {icon:'mentor', tag:'EMT · Mentorship', title:'Mentorship Task', desc:"Align your entire year to a test series or an automated schedule, with a mentor track running underneath the Daybook.", body:`<div class="info-block">Choose a structured test-series track or a fully automated month-by-month schedule. Either way, the Daybook keeps filling itself from this plan.</div>`},
+  {icon:'mains', tag:'EMT · Mains PYQs', title:'Mains PYQs + Solutions', desc:"Topic-wise and paper-wise Mains questions with solutions, sourced from open material and coaching content.", body:`
+    <div class="info-block">Tell it a goal — e.g. <i>“all Geography questions, next 2 weeks”</i> — and every tagged question is split evenly across the days, landing in the Daybook as <b>Practice X questions</b>.</div>
+    <div class="field"><label>Build a plan</label><select>${THEMES.slice(0,8).map(t=>`<option>${t}</option>`).join('')}</select></div>
+    <div class="field"><label>Window</label><select><option>1 week</option><option>2 weeks</option><option>1 month</option></select></div>`},
+  {icon:'map', tag:'EMT · CA Map', title:'CA Map', desc:"Your current-affairs sources, clippings and syllabus links laid out as one connected map — built the way an Obsidian vault links notes.", body:`
+    <div class="info-block">Every CA entry you file in the Daybook becomes a note, linked to its syllabus theme and to every other note that shares a thread — exactly like an Obsidian graph. Hover a note to trace its connections.</div>
+    <div class="graph-wrap"><div id="obsidianGraph"></div></div>
+    <div class="graph-caption">Hover any note to trace its links</div>`},
+  {icon:'clock', tag:'EMT · Time Log', title:'Time Log', desc:"Log hours across GS, Optional, CA and CSAT — kept for 30–45 days, with the rest of the day folded in as non-study hours.", body:`
+    <table class="mini-table"><thead><tr><th>Date</th><th>GS</th><th>Opt.</th><th>CA</th><th>CSAT</th><th>Total</th><th>Non-study</th></tr></thead>
+    <tbody>
+      <tr><td>21 Aug</td><td>4</td><td>2</td><td>1</td><td>1</td><td>8</td><td>5</td></tr>
+      <tr><td>22 Aug</td><td>3</td><td>3</td><td>1</td><td>0</td><td>7</td><td>6</td></tr>
+    </tbody></table>
+    <div class="field" style="margin-top:12px;"><label>Log today's hours</label><input type="text" placeholder="e.g. GS 3, Optional 2, CA 1"></div>`},
+  {icon:'plan', tag:'EMT · 02', title:'Planning Ahead', desc:"Tasks you add here persist on the server indefinitely — nothing is wiped until you delete it yourself.", body:`<div class="info-block">Unlike the Daybook (wiped at 4AM daily), everything filed in Planning Ahead stays put. It's the backlog the Daybook draws its "today" list from.</div>`},
+  {icon:'stats', tag:'EMT · Statistics', title:'Statistics', desc:"Every logged hour and cleared task rolled up into one long-run view of your preparation.", body:`<div class="info-block">Cross-references the Time Log and Daybook history into weekly and monthly trend lines per subject.</div>`},
+  {icon:'heart', tag:'EMT · Gratitude Vault', title:'Gratitude Vault', desc:"A quiet, private log — separate from the grind, for the days that need remembering for the right reasons.", body:`<div class="info-block">A short daily entry, kept private, with no scoring and no streaks to chase.</div>`},
+  {icon:'check2', tag:'EMT · Test Analysis', title:'Prelims & Mains Test Analysis', desc:"Score trends, accuracy by subject, and time-per-question — broken out separately for Prelims and Mains.", body:`<div class="info-block">Upload or link a test attempt and get accuracy, negative-marking impact, and time spent per section, benchmarked against your last five attempts.</div>`},
+  {icon:'mains', tag:'EMT · Optional PYQs', title:'Optional PYQs', desc:"The same topic-and-year categorised Mains-PYQ engine, scoped to your Optional subject.", body:`<div class="info-block">Set a goal like <i>“all questions from the last 5 years on a given topic”</i> and it's divided evenly into daily practice, filed straight into the Daybook.</div>`},
+];
+
+/* ================= render: nav tabs ================= */
+function catIcon(id){ const c = CATEGORIES.find(c=>c.id===id); return c ? c.icon : 'book'; }
+
+function renderNav(){
+  const rail = document.getElementById('railTabs');
+  rail.innerHTML='';
+  CATEGORIES.forEach(c=>{
+    const rb = document.createElement('button');
+    rb.className='rail-tab'+(c.id===activeCat?' active':'');
+    rb.innerHTML = svg(c.icon) + `<span>${c.label}</span>`;
+    rb.onclick=()=>{
+      activeCat=c.id; render();
+      if(window.innerWidth < 880){ sidebarOpen = false; applySidebarState(); }
+    };
+    rail.appendChild(rb);
+  });
+}
+
+/* ================= render: tab strip + panels ================= */
+function renderTabStrip(){
+  const strip = document.getElementById('tabStrip');
+  strip.innerHTML = CATEGORIES.map(c=>{
+    const n = tasks.filter(t=>t.cat===c.id).length;
+    return `<button class="tab-chip${c.id===activeCat?' active':''}" data-cat="${c.id}">${c.label} <span class="n">${n}</span></button>`;
+  }).join('');
+  strip.querySelectorAll('.tab-chip').forEach(el=>{
+    el.onclick = ()=>{ activeCat = el.dataset.cat; render(); };
+  });
+
+  document.getElementById('caPanel').classList.toggle('show', activeCat==='CA');
+
+  const csatPanel = document.getElementById('csatPanel');
+  csatPanel.classList.toggle('show', activeCat==='CSAT');
+  if(activeCat==='CSAT'){
+    csatPanel.innerHTML = `
+      <div class="csat-card"><div class="csat-top"><strong>Percentage — Level 1</strong><span>0/20 done</span></div><div class="bar"><i style="width:0%"></i></div><div class="csat-hint">Clear this set and Level 2 is auto-added to tomorrow's Daybook.</div></div>
+      <div class="csat-card"><div class="csat-top"><strong>Data Interpretation — Level 1</strong><span>12/20 done</span></div><div class="bar"><i style="width:60%"></i></div><div class="csat-hint">Assigned from your last 7 days in the CSAT Engine.</div></div>
+      <div class="csat-card"><div class="csat-top"><strong>Logical Reasoning — Level 2</strong><span>4/15 done</span></div><div class="bar"><i style="width:27%"></i></div><div class="csat-hint">Unlocked after clearing Level 1 last week.</div></div>`;
+  }
+}
+
+/* ================= render: task list ================= */
+let openMenuId = null;
+
+function renderTasks(){
+  const list = document.getElementById('taskList');
+  const filtered = tasks.filter(t=>t.cat===activeCat);
+  document.getElementById('doneCount').textContent = tasks.filter(t=>t.done).length;
+  document.getElementById('totalCount').textContent = tasks.length;
+
+  if(filtered.length===0){
+    list.innerHTML = `<div class="empty-state">Nothing filed under ${activeCat} yet — add the first entry.</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(t=>`
+    <div class="task${t.done?' done':''}" data-id="${t.id}">
+      <button class="check" aria-label="Mark done">${svg('check2')}</button>
+      <div class="task-body">
+        <div class="task-title">${t.title}</div>
+        <div class="task-meta">
+          <span class="stamp ${t.priority}">${t.priority}</span>
+          ${t.theme?`<span class="cat-tag">${t.theme}</span>`:''}
+        </div>
+      </div>
+      <div class="task-actions">
+        <div class="menu-wrap">
+          <button class="dots" aria-label="Task options">${svg('dots')}</button>
+          <div class="menu${openMenuId===t.id?' open':''}">
+            <button class="reschedule">Reschedule to tomorrow</button>
+            <button class="danger delete">Delete task</button>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  list.querySelectorAll('.task').forEach(el=>{
+    const id = Number(el.dataset.id);
+    el.querySelector('.check').onclick = ()=>{ toggleDone(id); };
+    el.querySelector('.dots').onclick = (e)=>{ e.stopPropagation(); openMenuId = openMenuId===id? null : id; renderTasks(); };
+    el.querySelector('.reschedule').onclick = ()=>{ rescheduleTask(id); };
+    el.querySelector('.delete').onclick = ()=>{ deleteTask(id); };
+  });
+}
+document.addEventListener('click', ()=>{ if(openMenuId!==null){ openMenuId=null; renderTasks(); } });
+
+function toggleDone(id){ const t=tasks.find(t=>t.id===id); t.done=!t.done; renderTasks(); renderTabStrip(); }
+function deleteTask(id){ tasks = tasks.filter(t=>t.id!==id); openMenuId=null; renderTasks(); renderTabStrip(); }
+function rescheduleTask(id){
+  const t=tasks.find(t=>t.id===id);
+  t.rescheduled = true;
+  openMenuId=null;
+  renderTasks();
+  flashToast(`“${t.title.slice(0,28)}${t.title.length>28?'…':''}” moved to Planning Ahead for tomorrow.`);
+}
+function flashToast(msg){
+  let el = document.getElementById('toast');
+  if(!el){
+    el = document.createElement('div'); el.id='toast';
+    el.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1b2a44;color:#eee7d3;padding:10px 16px;border-radius:100px;font-size:12.5px;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:88vw;text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity='1';
+  clearTimeout(window.__t);
+  window.__t = setTimeout(()=>{ el.style.transition='opacity .4s'; el.style.opacity='0'; }, 2200);
+}
+
+/* ================= add task modal ================= */
+const overlay = document.getElementById('overlay');
+let selectedPriority = 'medium';
+
+document.getElementById('themeSelect').innerHTML = THEMES.map(t=>`<option>${t}</option>`).join('');
+
+document.getElementById('openAdd').onclick = ()=>{
+  document.getElementById('modalCat').textContent = activeCat;
+  document.getElementById('themeField').style.display = activeCat==='CA' ? 'block':'none';
+  document.getElementById('taskTitle').placeholder = activeCat==='CA' ? "e.g. Farm loan waivers — write 150 words" : "What needs doing today?";
+  document.getElementById('taskTitle').value='';
+  overlay.classList.add('open');
+};
+document.getElementById('closeAdd').onclick = ()=> overlay.classList.remove('open');
+overlay.addEventListener('click', (e)=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+
+document.querySelectorAll('#priorityPicker .pchip').forEach(chip=>{
+  chip.onclick = ()=>{
+    selectedPriority = chip.dataset.p;
+    document.querySelectorAll('#priorityPicker .pchip').forEach(c=>c.classList.remove('sel'));
+    chip.classList.add('sel');
+  };
+});
+
+document.getElementById('submitTask').onclick = ()=>{
+  const title = document.getElementById('taskTitle').value.trim();
+  if(!title){ document.getElementById('taskTitle').focus(); return; }
+  const task = {id:nextId++, title, cat:activeCat, priority:selectedPriority, done:false};
+  if(activeCat==='CA'){ task.theme = document.getElementById('themeSelect').value; }
+  tasks.push(task);
+  overlay.classList.remove('open');
+  render();
+  flashToast("Filed to today's Daybook.");
+};
+
+/* ================= modules ================= */
+function renderModules(){
+  const grid = document.getElementById('moduleGrid');
+  grid.innerHTML = MODULES.map((m,i)=>`
+    <button class="module-card" data-i="${i}">
+      <div class="module-top">
+        <div class="module-icon">${svg(m.icon)}</div>
+        <span class="module-id">${m.tag}</span>
+      </div>
+      <h3>${m.title}</h3>
+      <p>${m.desc}</p>
+      <span class="module-open">Open ledger ${svg('arrow','style="width:12px;height:12px;"')}</span>
+    </button>`).join('');
+  grid.querySelectorAll('.module-card').forEach(el=>{
+    el.onclick = ()=> openModule(Number(el.dataset.i));
+  });
+}
+const moduleOverlay = document.getElementById('moduleOverlay');
+function openModule(i){
+  const m = MODULES[i];
+  document.getElementById('moduleModalBody').innerHTML = `<h3>${m.title}</h3><p class="sub">${m.desc}</p>${m.body}`;
+  moduleOverlay.classList.add('open');
+  if(m.title==='CA Map'){ renderObsidianGraph(); }
+}
+
+/* ================= CA Map: Obsidian-style note graph ================= */
+const GRAPH_NODES = [
+  {id:'econ',       label:'Indian Economy',      x:50, y:18, theme:'brass'},
+  {id:'msp',        label:'MSP & Farm Loans',    x:18, y:32, theme:'brass'},
+  {id:'budget',     label:'Budget 2026',         x:78, y:30, theme:'brass'},
+  {id:'rbi',        label:'RBI Policy',          x:62, y:55, theme:'brass'},
+  {id:'inflation',  label:'Inflation',           x:42, y:68, theme:'seal'},
+  {id:'polity',     label:'Polity',              x:14, y:60, theme:'navy'},
+  {id:'judiciary',  label:'Judiciary',           x:26, y:85, theme:'navy'},
+  {id:'federalism', label:'Federalism',          x:6,  y:42, theme:'navy'},
+  {id:'ir',         label:'Bilateral Relations', x:88, y:58, theme:'sage'},
+  {id:'trade',      label:'Trade Policy',        x:72, y:82, theme:'sage'},
+];
+const GRAPH_EDGES = [
+  ['econ','msp'],['econ','budget'],['econ','rbi'],['econ','inflation'],
+  ['msp','polity'],['budget','trade'],['rbi','inflation'],
+  ['polity','judiciary'],['polity','federalism'],['federalism','econ'],
+  ['ir','trade'],['trade','econ'],['judiciary','econ'],
+];
+function renderObsidianGraph(){
+  const wrap = document.getElementById('obsidianGraph');
+  if(!wrap) return;
+  const pos = {}; GRAPH_NODES.forEach(n=>pos[n.id]=n);
+  const lines = GRAPH_EDGES.map(([a,b])=>{
+    const A=pos[a], B=pos[b];
+    return `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" class="g-edge" data-a="${a}" data-b="${b}"/>`;
+  }).join('');
+  const nodes = GRAPH_NODES.map(n=>`
+    <g class="g-node" data-id="${n.id}" transform="translate(${n.x} ${n.y})">
+      <circle r="2.6" class="g-dot ${n.theme}"/>
+      <text x="0" y="-4.2" class="g-label">${n.label}</text>
+    </g>`).join('');
+  wrap.innerHTML = `<svg viewBox="0 0 100 100" class="graph-svg" preserveAspectRatio="xMidYMid meet">
+    <g class="g-edges">${lines}</g>
+    <g class="g-nodes">${nodes}</g>
+  </svg>`;
+  wrap.querySelectorAll('.g-node').forEach(g=>{
+    g.addEventListener('mouseenter', ()=>{
+      const id = g.dataset.id;
+      const linked = new Set([id]);
+      GRAPH_EDGES.forEach(([a,b])=>{ if(a===id) linked.add(b); if(b===id) linked.add(a); });
+      wrap.querySelectorAll('.g-edge').forEach(e=>{
+        e.classList.toggle('active', e.dataset.a===id || e.dataset.b===id);
+      });
+      wrap.querySelectorAll('.g-node').forEach(n=> n.classList.toggle('dim', !linked.has(n.dataset.id)));
+    });
+    g.addEventListener('mouseleave', ()=>{
+      wrap.querySelectorAll('.g-edge').forEach(e=>e.classList.remove('active'));
+      wrap.querySelectorAll('.g-node').forEach(n=>n.classList.remove('dim'));
+    });
+  });
+}
+
+/* ================= sidebar drawer (three-bar open / close) ================= */
+let sidebarOpen = window.innerWidth >= 880;
+function applySidebarState(){
+  document.getElementById('rail').classList.toggle('open', sidebarOpen);
+  document.getElementById('backdrop').classList.toggle('show', sidebarOpen);
+  document.getElementById('appMain').classList.toggle('pushed', sidebarOpen);
+}
+function toggleSidebar(){ sidebarOpen = !sidebarOpen; applySidebarState(); }
+document.getElementById('hamburgerBtn').onclick = toggleSidebar;
+document.getElementById('railCloseBtn').onclick = toggleSidebar;
+document.getElementById('backdrop').onclick = ()=>{ sidebarOpen=false; applySidebarState(); };
+applySidebarState();
+
+/* ================= dark mode ================= */
+let isDark = false;
+function applyDarkMode(){
+  document.documentElement.classList.toggle('dark', isDark);
+  document.getElementById('darkToggle').innerHTML = svg(isDark ? 'sun' : 'moon');
+  document.querySelectorAll('#setLightBtn, #setDarkBtn').forEach(b=>b.classList.remove('sel'));
+  const active = document.getElementById(isDark ? 'setDarkBtn' : 'setLightBtn');
+  if(active) active.classList.add('sel');
+}
+document.getElementById('darkToggle').onclick = ()=>{ isDark = !isDark; applyDarkMode(); };
+
+/* ================= profile & settings modal ================= */
+const settingsOverlay = document.getElementById('settingsOverlay');
+function openSettings(){ settingsOverlay.classList.add('open'); }
+document.getElementById('profileTrigger').onclick = openSettings;
+document.getElementById('railProfileBtn').onclick = openSettings;
+document.getElementById('railSettingsBtn').onclick = ()=>{
+  openSettings();
+  if(window.innerWidth < 880){ sidebarOpen=false; applySidebarState(); }
+};
+document.getElementById('closeSettings').onclick = ()=> settingsOverlay.classList.remove('open');
+settingsOverlay.addEventListener('click', (e)=>{ if(e.target===settingsOverlay) settingsOverlay.classList.remove('open'); });
+document.getElementById('setLightBtn').onclick = ()=>{ isDark=false; applyDarkMode(); };
+document.getElementById('setDarkBtn').onclick = ()=>{ isDark=true; applyDarkMode(); };
+document.getElementById('saveSettings').onclick = ()=>{
+  const name = document.getElementById('setName').value.trim() || 'Aarav Mehta';
+  const year = document.getElementById('setYear').value;
+  document.querySelectorAll('.profile-name, .rail-bottom-text b').forEach(el=> el.textContent = name);
+  document.querySelectorAll('.profile-sub, .rail-bottom-text span').forEach(el=> el.textContent = year);
+  settingsOverlay.classList.remove('open');
+  flashToast('Profile updated.');
+};
+document.getElementById('closeModule').onclick = ()=> moduleOverlay.classList.remove('open');
+moduleOverlay.addEventListener('click', (e)=>{ if(e.target===moduleOverlay) moduleOverlay.classList.remove('open'); });
+
+/* ================= countdown to 4AM ================= */
+function updateCountdown(){
+  const now = new Date();
+  const next4 = new Date(now);
+  next4.setHours(4,0,0,0);
+  if(now >= next4) next4.setDate(next4.getDate()+1);
+  const diff = next4 - now;
+  const h = Math.floor(diff/3600000);
+  const m = Math.floor((diff%3600000)/60000);
+  document.getElementById('countdown').textContent = `${h}h ${m}m`;
+  document.getElementById('todayTitle').textContent = now.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
+}
+setInterval(updateCountdown, 30000);
+
+/* ================= master render ================= */
+function render(){
+  renderNav();
+  renderTabStrip();
+  renderTasks();
+}
+render();
+renderModules();
+updateCountdown();
+applyDarkMode();
+</script>
+</body>
+</html>
